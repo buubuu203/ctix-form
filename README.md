@@ -12,7 +12,7 @@ Custom UI thay thế Google Form, cho phép:
 
 ## 🎥 Demo
 
-- Xem video demo tại: `assets/demo.mp4`
+- Xem video demo tại: `assets/demo.mov`
 - (Nếu không có video trong repo)  
   👉 Video/GIF demo có thể được đính kèm sau hoặc chia sẻ qua Google Drive.
 
