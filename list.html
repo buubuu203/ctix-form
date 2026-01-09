@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Danh sách phản ánh</title>
+  <style>
+    :root{
+      --bg:#f1f3f4;
+      --card:#fff;
+      --text:#202124;
+      --muted:#5f6368;
+      --border:#dadce0;
+      --focus:#1a73e8;
+      --danger:#d93025;
+      --radius:12px;
+      --shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);}
+    .topbar{height:8px;background:linear-gradient(90deg,#673ab7,#7e57c2,#9575cd);}
+    .wrap{max-width: 980px;margin: 24px auto 60px;padding: 0 16px;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .cardHeader{
+      padding: 18px 20px 12px;
+      border-left: 10px solid #673ab7;
+      display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;
+    }
+    h1{margin:0 0 8px;font-size: 26px;font-weight: 600;letter-spacing:.2px;}
+    .desc{margin:0;color:var(--muted);font-size:14px;line-height:1.4;}
+    .section{padding: 16px 20px 18px;}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+    .chip{
+      border:1px solid var(--border); background:#fff; border-radius:999px;
+      padding: 8px 12px; font-size: 13px; color: var(--muted);
+    }
+    .input{
+      flex: 1 1 260px;
+      border:1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      outline:none;
+      font-size: 14px;
+      background:#fff;
+    }
+    .input:focus{border-color:var(--focus)}
+    .btn{
+      appearance:none;border:1px solid transparent;background:#673ab7;color:#fff;
+      padding: 10px 14px;border-radius:999px;font-weight:600;cursor:pointer;white-space:nowrap;
+    }
+    .btn.secondary{background:#fff;color:#673ab7;border-color:#d7c9f5;}
+    .btn:disabled{opacity:.65;cursor:not-allowed;}
+    .tableWrap{
+      border:1px solid var(--border);
+      border-radius: 12px;
+      overflow:auto;
+      background:#fff;
+    }
+    table{border-collapse:collapse; width:100%; min-width: 900px;}
+    th, td{border-bottom:1px solid var(--border); padding: 10px 12px; font-size: 13px; vertical-align:top;}
+    th{position:sticky; top:0; background:#fafafa; text-align:left; font-weight:700;}
+    tr:hover td{background:#fcfcff}
+    .muted{color:var(--muted)}
+    .empty{padding: 14px 4px; color: var(--muted); font-size: 14px;}
+    .foot{text-align:center;margin-top: 18px;color: var(--muted);font-size: 12px;}
+  </style>
+</head>
+<body>
+  <div class="topbar"></div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <h1>Danh sách phản ánh</h1>
+          <p class="desc">Dữ liệu lấy trực tiếp từ Google Sheet thông qua Apps Script Web App.</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn secondary" type="button" onclick="window.location.href='./index.html'">← Quay lại form</button>
+          <button class="btn" type="button" id="reloadBtn">Tải lại</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="controls">
+          <span class="chip" id="sheetChip">Sheet: ...</span>
+          <span class="chip" id="rowsChip">Rows: ...</span>
+          <input class="input" id="q" placeholder="Tìm theo tên/email/nội dung..." />
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="empty" id="empty" style="display:none;">Không có dữ liệu.</div>
+      </div>
+    </div>
+
+    <div class="foot">Custom UI · trang danh sách phản ánh</div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8nPuuvvuUryksG5D4rEAVEARAbFr8iOHF4Y2gTExacaa1qwOCCef8xpl3cSXJ1mbc4w/exec";
+    const SHEET_NAME = "Status"; // đúng tên tab bạn đang list được
+    const $ = (id) => document.getElementById(id);
+
+    let ALL = { headers: [], rows: [] };
+
+    function safeText(x){ return (x ?? "").toString(); }
+
+    function normalize(s){
+      return safeText(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function renderTable(headers, rows){
+      // thead
+      const thead = $("thead");
+      thead.innerHTML = "";
+      const trh = document.createElement("tr");
+      headers.forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = safeText(h);
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+
+      // tbody
+      const tbody = $("tbody");
+      tbody.innerHTML = "";
+
+      if (!rows.length) {
+        $("empty").style.display = "block";
+        return;
+      }
+      $("empty").style.display = "none";
+
+      // find file column
+      const fileIdx = headers.findIndex(h => normalize(h).includes("tệp") || normalize(h).includes("tep") || normalize(h).includes("file"));
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        headers.forEach((_, idx) => {
+          const td = document.createElement("td");
+          const val = safeText(r[idx]);
+
+          // render drive link nicely
+          if (idx === fileIdx && val.startsWith("http")) {
+            const a = document.createElement("a");
+            a.href = val;
+            a.target = "_blank";
+            a.rel = "noreferrer";
+            a.textContent = "Mở file";
+            td.appendChild(a);
+          } else {
+            td.textContent = val;
+          }
+
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function applyFilter(){
+      const q = normalize($("q").value);
+      if (!q) return renderTable(ALL.headers, ALL.rows);
+
+      const filtered = ALL.rows.filter(r => normalize(r.join(" ")).includes(q));
+      $("rowsChip").textContent = `Rows: ${filtered.length}`;
+      renderTable(ALL.headers, filtered);
+    }
+
+    async function load(){
+      $("reloadBtn").disabled = true;
+      $("reloadBtn").textContent = "Đang tải...";
+
+      try {
+        const url = `${SCRIPT_URL}?action=list&sheetName=${encodeURIComponent(SHEET_NAME)}`;
+        const res = await fetch(url);
+        const raw = await res.text();
+        let data = {};
+        try { data = JSON.parse(raw); } catch (_) {}
+
+        if (!data.ok) throw new Error(data.error || raw || "Fetch failed");
+
+        const values = data.values || [];
+        const headers = values[0] || [];
+        const rows = values.slice(1);
+
+        ALL = { headers, rows };
+
+        $("sheetChip").textContent = `Sheet: ${data.sheetName || SHEET_NAME}`;
+        $("rowsChip").textContent = `Rows: ${rows.length}`;
+
+        renderTable(headers, rows);
+      } catch (e) {
+        console.error(e);
+        $("sheetChip").textContent = "Sheet: lỗi";
+        $("rowsChip").textContent = "Rows: 0";
+        $("empty").style.display = "block";
+        $("empty").textContent = "Không load được dữ liệu. Kiểm tra SCRIPT_URL / quyền deploy / sheetName.";
+      } finally {
+        $("reloadBtn").disabled = false;
+        $("reloadBtn").textContent = "Tải lại";
+      }
+    }
+
+    $("reloadBtn").addEventListener("click", load);
+    $("q").addEventListener("input", () => {
+      // debounce nhẹ
+      clearTimeout(window.__q);
+      window.__q = setTimeout(applyFilter, 120);
+    });
+
+    load();
+  </script>
+</body>
+</html>

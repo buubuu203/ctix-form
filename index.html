@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Custom Form</title>
+  <style>
+    :root{
+      --bg:#f1f3f4;
+      --card:#fff;
+      --text:#202124;
+      --muted:#5f6368;
+      --border:#dadce0;
+      --focus:#1a73e8;
+      --danger:#d93025;
+      --radius:12px;
+      --shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);}
+    .topbar{height:8px;background:linear-gradient(90deg,#673ab7,#7e57c2,#9575cd);}
+    .wrap{max-width:760px;margin:24px auto 60px;padding:0 16px;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px;}
+    .cardHeader{padding:18px 20px 12px;border-left:10px solid #673ab7;}
+    h1{margin:0 0 8px;font-size:26px;font-weight:600;letter-spacing:.2px;}
+    .desc{margin:0;color:var(--muted);font-size:14px;line-height:1.4;}
+    .section{padding:16px 20px 18px;}
+    .qTitle{font-size:15px;font-weight:600;margin:0 0 10px;}
+    .req{color:var(--danger);margin-left:6px;font-weight:700;}
+    .field{display:block;width:100%;border:none;border-bottom:2px solid var(--border);padding:10px 0 8px;font-size:16px;outline:none;background:transparent;transition:border-color .15s ease;}
+    .field:focus{border-bottom-color:var(--focus);}
+    textarea.field{resize:vertical;min-height:92px;padding-top:6px;line-height:1.4;}
+    .helper{margin-top:6px;font-size:12px;color:var(--muted);}
+    .error{margin-top:8px;font-size:13px;color:var(--danger);display:none;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;}
+    .col{flex:1 1 260px;min-width:220px;}
+    .actions{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 18px;gap:10px;flex-wrap:wrap;}
+    .btn{appearance:none;border:1px solid transparent;background:#673ab7;color:#fff;padding:10px 16px;border-radius:999px;font-weight:600;cursor:pointer;transition:filter .15s ease, transform .02s ease;white-space:nowrap;}
+    .btn:disabled{opacity:.65;cursor:not-allowed;}
+    .btn:hover{filter:brightness(.95)}
+    .btn:active{transform:translateY(1px)}
+    .note{color:var(--muted);font-size:12px;}
+    .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#202124;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:var(--shadow);font-size:13px;display:none;z-index:10;max-width:calc(100% - 24px);}
+    .foot{text-align:center;margin-top:18px;color:var(--muted);font-size:12px;}
+    .fab{position:fixed;bottom:20px;right:20px;box-shadow:var(--shadow);}
+
+    /* upload box */
+    .fileBox{border:1px dashed var(--border);border-radius:12px;padding:12px;background:#fafafa;}
+    .fileRow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+    .fileName{font-size:13px;color:var(--muted);word-break:break-all;}
+  </style>
+</head>
+<body>
+  <div class="topbar"></div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="cardHeader">
+        <h1>Đăng ký thông tin</h1>
+        <p class="desc">Vui lòng điền đầy đủ. Thông tin sẽ được lưu vào Google Sheet (kèm tệp đính kèm nếu có).</p>
+      </div>
+
+      <div class="section">
+        <form id="form">
+          <div class="row">
+            <div class="col">
+              <div class="qTitle">Họ và tên<span class="req">*</span></div>
+              <input class="field" id="fullName" name="fullName" placeholder="Nhập họ và tên" autocomplete="name" />
+              <div class="error" id="err_fullName">Vui lòng nhập họ và tên.</div>
+            </div>
+
+            <div class="col">
+              <div class="qTitle">Email<span class="req">*</span></div>
+              <input class="field" id="email" name="email" placeholder="name@gmail.com" autocomplete="email" />
+              <div class="error" id="err_email">Vui lòng nhập email hợp lệ.</div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:16px;">
+            <div class="col">
+              <div class="qTitle">SDT</div>
+              <input class="field" id="phone" name="phone" placeholder="Ví dụ: 090..." autocomplete="tel" />
+              <div class="helper">Không bắt buộc</div>
+            </div>
+
+            <div class="col">
+              <div class="qTitle">Gửi phản ánh/ Khiếu nại</div>
+              <textarea class="field" id="message" name="message" placeholder="Nội dung phản ánh/khiếu nại..."></textarea>
+              <div class="helper">Không bắt buộc</div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:16px;">
+            <div class="col">
+              <div class="qTitle">Thông tin đầu mối</div>
+              <input class="field" id="contactPerson" name="contactPerson" placeholder="Tên/đơn vị đầu mối (nếu có)..." />
+              <div class="helper">Không bắt buộc</div>
+            </div>
+          </div>
+
+          <!-- FILE UPLOAD SECTION (Tệp đính kèm) -->
+          <div class="row" style="margin-top:16px;">
+            <div class="col">
+              <div class="qTitle">Tệp đính kèm</div>
+              <div class="fileBox">
+                <div class="fileRow">
+                  <input id="file" type="file" />
+                  <span class="fileName" id="fileName">Chưa chọn file</span>
+                </div>
+                <div class="helper">Không bắt buộc. Gợi ý: ảnh/PDF. (Tối đa 10MB)</div>
+                <div class="error" id="err_file">File quá lớn hoặc không hợp lệ.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" id="submitBtn" type="submit">Gửi</button>
+            <div class="note">* Bắt buộc</div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="foot">Custom UI · gửi dữ liệu vào Google Sheet bằng Apps Script</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8nPuuvvuUryksG5D4rEAVEARAbFr8iOHF4Y2gTExacaa1qwOCCef8xpl3cSXJ1mbc4w/exec";
+    const $ = (id) => document.getElementById(id);
+
+    function toast(msg){
+      const t = $("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      clearTimeout(window.__t);
+      window.__t = setTimeout(()=> t.style.display="none", 2600);
+    }
+    function isEmail(x){
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x||"").trim());
+    }
+    function setErr(id, show){
+      const el = $(id);
+      if (el) el.style.display = show ? "block" : "none";
+    }
+
+    function readFileAsBase64(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || "");
+          const base64 = result.split(",")[1] || "";
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // show filename
+    $("file").addEventListener("change", () => {
+      const f = $("file")?.files?.[0];
+      $("fileName").textContent = f ? f.name : "Chưa chọn file";
+      setErr("err_file", false);
+    });
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fullName = $("fullName").value.trim();
+      const email = $("email").value.trim();
+      const phone = $("phone").value.trim();
+      const message = $("message").value.trim();
+      const contactPerson = $("contactPerson").value.trim();
+      const file = $("file")?.files?.[0];
+
+      const okName = fullName.length > 0;
+      const okEmail = isEmail(email);
+
+      setErr("err_fullName", !okName);
+      setErr("err_email", !okEmail);
+
+      // file validate
+      setErr("err_file", false);
+      if (file) {
+        const maxBytes = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxBytes) {
+          setErr("err_file", true);
+          toast("File quá lớn (tối đa 10MB).");
+          return;
+        }
+      }
+
+      if (!okName || !okEmail) {
+        toast("Vui lòng kiểm tra lại thông tin bắt buộc.");
+        return;
+      }
+
+      $("submitBtn").disabled = true;
+      $("submitBtn").textContent = "Đang gửi...";
+
+      try {
+        let filePayload = null;
+        if (file) {
+          const base64 = await readFileAsBase64(file);
+          filePayload = {
+            name: file.name,
+            mimeType: file.type || "application/octet-stream",
+            base64
+          };
+        }
+
+        // ✅ MAP 100% theo Google Form headers trong sheet
+        const payload = {
+          emailAddress: email,          // "Email Address"
+          complaint: message,           // "Gửi phản ánh/ Khiếu nại"
+          fullName: fullName,           // "Họ tên"
+          contactEmail: email,          // "Email"
+          phone: phone,                 // "SDT"
+          contactPerson: contactPerson, // "Thông tin đầu mối"
+          file: filePayload             // "Tệp đính kèm" (Apps Script upload Drive + ghi URL)
+        };
+
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+        });
+
+        const raw = await res.text();
+        let data = {};
+        try { data = JSON.parse(raw); } catch (_) {}
+
+        if (!data.ok) throw new Error(data.error || raw || "Submit failed");
+
+        toast(file ? "Gửi thành công! File đã upload." : "Gửi thành công!");
+        $("form").reset();
+        $("fileName").textContent = "Chưa chọn file";
+      } catch (err) {
+        console.error(err);
+        toast("Gửi thất bại. Kiểm tra Apps Script deploy / quyền folder Drive.");
+      } finally {
+        $("submitBtn").disabled = false;
+        $("submitBtn").textContent = "Gửi";
+      }
+    });
+  </script>
+
+  <button type="button" class="btn fab" onclick="window.location.href='./list.html'">
+    Danh sách phản ánh
+  </button>
+</body>
+</html>
